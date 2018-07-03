@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<nlog xmlns="http://www.nlog-project.org/schemas/NLog.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <targets  async="true">
+    <target name="host" xsi:type="File"
+          fileName="logs\OrderProcessor_.xml"
+          archiveFileName="logs\OrderProcessor_{#####}.xml"
+          archiveAboveSize="10000000"
+          layout="${log4jxmlevent:includeSourceInfo=true:includeCalSite=true:includeMDC=true:appInfo=true:includeNDC=true:includeNLogData=true} ${exception:format=ToString,StackTrace}${newline}" />
+    <target name="console" xsi:type="ColoredConsole" useDefaultRowHighlightingRules="true" />
+  </targets>
+  <rules>
+    <logger name="Host" minlevel="Info" writeTo="host" />
+    <logger name="*" minlevel="Info" writeTo="host" />
+    <logger name="*" minlevel="Info" writeTo="console" />
+  </rules>
+</nlog>

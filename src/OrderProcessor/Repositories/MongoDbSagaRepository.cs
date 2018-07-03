@@ -1,0 +1,188 @@
+﻿using Common.Logging;
+using MassTransit.Saga;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.Contracts;
+using System.Linq;
+using System.Text;
+
+namespace SagasDemo.OrderProcessor.Repositories
+{
+    public class MongoDbSagaRepository<TSaga> :
+        ISagaRepository<TSaga>
+        where TSaga : class, IVersionedSaga
+    {
+        const string DefaultCollectionName = "sagas";
+        static readonly ILog _log = Logger.Get<MongoDbSagaRepository<TSaga>>();
+        readonly IMongoCollection<TSaga> _collection;
+        readonly IMongoDbSagaConsumeContextFactory _mongoDbSagaConsumeContextFactory;
+
+        public MongoDbSagaRepository(string connectionString, string database, string collectionName = DefaultCollectionName)
+            : this(new MongoClient(connectionString).GetDatabase(database), new MongoDbSagaConsumeContextFactory(), collectionName)
+        {
+        }
+
+        public MongoDbSagaRepository(MongoUrl mongoUrl, string collectionName = DefaultCollectionName)
+            : this(mongoUrl.Url, mongoUrl.DatabaseName, collectionName)
+        {
+        }
+
+        public MongoDbSagaRepository(IMongoDatabase mongoDatabase, IMongoDbSagaConsumeContextFactory mongoDbSagaConsumeContextFactory)
+            : this(mongoDatabase, mongoDbSagaConsumeContextFactory, DefaultCollectionName)
+        {
+        }
+
+        public MongoDbSagaRepository(IMongoDatabase mongoDatabase, IMongoDbSagaConsumeContextFactory mongoDbSagaConsumeContextFactory, string collectionName)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName))
+                throw new ArgumentNullException(nameof(collectionName));
+            if (collectionName.Length > 120)
+                throw new ArgumentException("Collection names must be no longer than 120 characters", nameof(collectionName));
+
+            _mongoDbSagaConsumeContextFactory = mongoDbSagaConsumeContextFactory;
+
+            _collection = mongoDatabase.GetCollection<TSaga>(collectionName);
+        }
+
+        public void Probe(ProbeContext context)
+        {
+            var scope = context.CreateScope("sagaRepository");
+
+            scope.Set(new
+            {
+                Persistence = "mongodb",
+                SagaType = TypeMetadataCache<TSaga>.ShortName,
+                Properties = TypeCache<TSaga>.ReadWritePropertyCache.Select(x => x.Property.Name).ToArray()
+            });
+        }
+
+        public async Task Send<T>(ConsumeContext<T> context, ISagaPolicy<TSaga, T> policy, IPipe<SagaConsumeContext<TSaga, T>> next) where T : class
+        {
+            if (!context.CorrelationId.HasValue)
+                throw new SagaException("The CorrelationId was not specified", typeof(TSaga), typeof(T));
+
+            TSaga instance;
+
+            if (policy.PreInsertInstance(context, out instance))
+            {
+                await PreInsertSagaInstance(context, instance).ConfigureAwait(false);
+            }
+
+            if (instance == null)
+            {
+                instance =
+                    await _collection.Find(x => x.CorrelationId == context.CorrelationId).SingleOrDefaultAsync(context.CancellationToken).ConfigureAwait(false);
+            }
+
+            if (instance == null)
+            {
+                var missingSagaPipe = new MissingPipe<TSaga, T>(_collection, next, _mongoDbSagaConsumeContextFactory);
+
+                await policy.Missing(context, missingSagaPipe).ConfigureAwait(false);
+            }
+            else
+            {
+                await SendToInstance(context, policy, next, instance).ConfigureAwait(false);
+            }
+        }
+
+        public async Task SendQuery<T>(SagaQueryConsumeContext<TSaga, T> context, ISagaPolicy<TSaga, T> policy, IPipe<SagaConsumeContext<TSaga, T>> next)
+            where T : class
+        {
+            try
+            {
+                List<TSaga> sagaInstances = await _collection.Find(context.Query.FilterExpression).ToListAsync().ConfigureAwait(false);
+
+                if (!sagaInstances.Any())
+                {
+                    var missingPipe = new MissingPipe<TSaga, T>(_collection, next, _mongoDbSagaConsumeContextFactory);
+
+                    await policy.Missing(context, missingPipe).ConfigureAwait(false);
+                }
+                else
+                {
+                    foreach (var instance in sagaInstances)
+                    {
+                        await SendToInstance(context, policy, next, instance).ConfigureAwait(false);
+                    }
+                }
+            }
+            catch (SagaException sex)
+            {
+                if (_log.IsErrorEnabled)
+                    _log.Error($"SAGA:{TypeMetadataCache<TSaga>.ShortName} Exception {TypeMetadataCache<T>.ShortName}", sex);
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (_log.IsErrorEnabled)
+                    _log.Error($"SAGA:{TypeMetadataCache<TSaga>.ShortName} Exception {TypeMetadataCache<T>.ShortName}", ex);
+
+                throw new SagaException(ex.Message, typeof(TSaga), typeof(T), Guid.Empty, ex);
+            }
+        }
+
+        async Task PreInsertSagaInstance<T>(ConsumeContext<T> context, TSaga instance) where T : class
+        {
+            try
+            {
+                await _collection.InsertOneAsync(instance, cancellationToken: context.CancellationToken).ConfigureAwait(false);
+
+                _log.DebugFormat("SAGA:{0}:{1} Insert {2}", TypeMetadataCache<TSaga>.ShortName, instance.CorrelationId, TypeMetadataCache<T>.ShortName);
+            }
+            catch (Exception ex)
+            {
+                if (_log.IsDebugEnabled)
+                    _log.DebugFormat("SAGA:{0}:{1} Dupe {2} - {3}", TypeMetadataCache<TSaga>.ShortName, instance.CorrelationId, TypeMetadataCache<T>.ShortName,
+                        ex.Message);
+            }
+        }
+
+        async Task SendToInstance<T>(ConsumeContext<T> context, ISagaPolicy<TSaga, T> policy, IPipe<SagaConsumeContext<TSaga, T>> next, TSaga instance)
+            where T : class
+        {
+            try
+            {
+                if (_log.IsDebugEnabled)
+                    _log.DebugFormat("SAGA:{0}:{1} Used {2}", TypeMetadataCache<TSaga>.ShortName, instance.CorrelationId, TypeMetadataCache<T>.ShortName);
+
+                SagaConsumeContext<TSaga, T> sagaConsumeContext = _mongoDbSagaConsumeContextFactory.Create(_collection, context, instance);
+
+                await policy.Existing(sagaConsumeContext, next).ConfigureAwait(false);
+
+                if (!sagaConsumeContext.IsCompleted)
+                    await UpdateMongoDbSaga(context, instance).ConfigureAwait(false);
+            }
+            catch (SagaException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new SagaException(ex.Message, typeof(TSaga), typeof(T), instance.CorrelationId, ex);
+            }
+        }
+
+        async Task UpdateMongoDbSaga(PipeContext context, TSaga instance)
+        {
+            instance.Version++;
+
+            var old =
+                await
+                    _collection.FindOneAndReplaceAsync(x => x.CorrelationId == instance.CorrelationId && x.Version < instance.Version, instance,
+                        cancellationToken: context.CancellationToken).ConfigureAwait(false);
+
+            if (old == null)
+            {
+                throw new MongoDbConcurrencyException("Unable to update saga. It may not have been found or may have been updated by another process.");
+            }
+        }
+    }
+}
+
+    }
+}
