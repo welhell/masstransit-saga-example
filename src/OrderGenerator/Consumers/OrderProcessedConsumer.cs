@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SagasDemo.OrdenGenerator.Consumers
+namespace SagasDemo.Generator.Consumers
 {
     public class OrderProcessedConsumer : IConsumer<IOrderProcessed>
     {

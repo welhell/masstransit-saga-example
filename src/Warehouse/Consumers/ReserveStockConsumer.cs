@@ -1,6 +1,7 @@
 ﻿using Common.Logging;
 using MassTransit;
 using SagasDemo.Commands;
+using SagasDemo.Events;
 using System;
 using System.Collections.Generic;
 using System.Text;

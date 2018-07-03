@@ -3,11 +3,11 @@ using Common.Logging.Configuration;
 using Common.Logging.NLog;
 using MassTransit;
 using MassTransit.Util;
-using SagasDemo.Cashier.Consumers;
+using SagasDemo.Dispatcher.Consumers;
 using System;
 using System.Configuration;
 
-namespace SagasDemo.Generator
+namespace SagasDemo.Dispatcher
 {
     class Program
     {

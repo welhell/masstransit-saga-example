@@ -9,11 +9,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cashier", "Cashier\Cashier.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dispatcher", "Dispatcher\Dispatcher.csproj", "{5BD549E3-DE68-4B1C-BAB9-C5BD0EDDF883}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderProcessor", "OrderProcessor\OrderProcessor.csproj", "{E53ECDED-56DA-4E19-93C8-229A777FA3A9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrdenProcessor", "OrderProcessor\OrderProcessor.csproj", "{E53ECDED-56DA-4E19-93C8-229A777FA3A9}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServiceModel", "ServiceModel\ServiceModel.csproj", "{9D775CCB-8135-4288-8032-C876559C7D02}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrdenGenerator", "OrdenGenerator\OrdenGenerator.csproj", "{A576E77D-09C2-4C8D-BECA-05A07D637B2C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderGenerator", "OrderGenerator\OrderGenerator.csproj", "{A576E77D-09C2-4C8D-BECA-05A07D637B2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -8,10 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Consumers\StockReservedConsumer.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="AutoFixture" Version="4.4.0" />
     <PackageReference Include="Common.Logging.NLog41" Version="3.4.1" />
     <PackageReference Include="MassTransit.NLog" Version="5.1.3" />

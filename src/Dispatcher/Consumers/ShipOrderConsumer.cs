@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SagasDemo.Cashier.Consumers
+namespace SagasDemo.Dispatcher.Consumers
 {
     public class ShipOrderConsumer : IConsumer<IShipOrder>
     {

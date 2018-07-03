@@ -4,8 +4,9 @@ using Common.Logging.NLog;
 using MassTransit;
 using MassTransit.Util;
 using SagasDemo.Commands;
+using SagasDemo.Events;
 using SagasDemo.Generator.Services;
-using SagasDemo.OrdenGenerator.Consumers;
+using SagasDemo.Generator.Consumers;
 using System;
 using System.Configuration;
 

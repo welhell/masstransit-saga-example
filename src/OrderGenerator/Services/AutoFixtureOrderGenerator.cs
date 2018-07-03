@@ -26,6 +26,7 @@ namespace SagasDemo.Generator.Services
 
         private Customer GenerateCustomer() =>
             this.fixture.Create<Customer>();        
+            
         private ShoppingCart GenerateShoppingCart()
         {
             var products = new List<Product>();

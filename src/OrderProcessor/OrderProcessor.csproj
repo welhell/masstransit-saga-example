@@ -6,18 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Commands\**" />
-    <Compile Remove="Extensions\**" />
-    <Compile Remove="Repositories\**" />
-    <EmbeddedResource Remove="Commands\**" />
-    <EmbeddedResource Remove="Extensions\**" />
-    <EmbeddedResource Remove="Repositories\**" />
-    <None Remove="Commands\**" />
-    <None Remove="Extensions\**" />
-    <None Remove="Repositories\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Common.Logging.NLog41" Version="3.4.1" />
     <PackageReference Include="MassTransit" Version="5.1.3" />
     <PackageReference Include="MassTransit.Automatonymous" Version="5.1.3" />

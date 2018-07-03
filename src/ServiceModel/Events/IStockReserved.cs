@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SagasDemo.Commands
+namespace SagasDemo.Events
 {
     public interface IStockReserved:IMessage
     {
